@@ -1,0 +1,483 @@
+<html><head><base href="/" /><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gerenciador de Tarefas - Condomínio</title>
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f0f2f5;
+    }
+
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+        color: #1a73e8;
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 5px;
+        color: #444;
+        font-weight: 500;
+    }
+
+    input, textarea, select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+
+    textarea {
+        height: 100px;
+        resize: vertical;
+    }
+
+    button {
+        background: #1a73e8;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.3s;
+        margin-right: 5px;
+    }
+
+    button:hover {
+        background: #1557b0;
+    }
+
+    .task-list {
+        margin-top: 30px;
+    }
+
+    .task-item {
+        background: #f8f9fa;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        position: relative;
+    }
+
+    .task-item.completed {
+        border-left: 4px solid #28a745;
+        background: #e8f5e9;
+    }
+
+    .task-item.priority-comum {
+        border-left: 4px solid #28a745;
+    }
+
+    .task-item.priority-alta {
+        border-left: 4px solid #dc3545;
+    }
+
+    .task-item.pinned {
+        border: 2px solid #1a73e8;
+        background: #f0f7ff;
+    }
+
+    .task-item.pinned::before {
+        content: "📌 Fixado";
+        display: block;
+        color: #1a73e8;
+        font-size: 0.8em;
+        margin-bottom: 5px;
+    }
+
+    .task-item h3 {
+        margin: 0 0 10px 0;
+        color: #1a73e8;
+    }
+
+    .task-item p {
+        margin: 5px 0;
+    }
+
+    .task-buttons {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        gap: 10px;
+    }
+
+    .complete-btn {
+        background: #28a745;
+    }
+
+    .complete-btn:hover {
+        background: #218838;
+    }
+
+    .pin-btn {
+        background: #6c757d;
+    }
+
+    .pin-btn:hover {
+        background: #5a6268;
+    }
+
+    .pin-btn.pinned {
+        background: #1a73e8;
+    }
+
+    .delete-btn {
+        background: #dc3545;
+    }
+
+    .delete-btn:hover {
+        background: #c82333;
+    }
+
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        background: #4CAF50;
+        color: white;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        display: none;
+        z-index: 1000;
+    }
+
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+
+    .notification.show {
+        display: block;
+        animation: slideIn 0.5s forwards;
+    }
+
+    .notification.hide {
+        animation: slideOut 0.5s forwards;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+        animation: fadeIn 0.3s ease-in;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-weight: bold;
+        margin-left: 10px;
+    }
+
+    .status-pending {
+        background: #ffd700;
+        color: #000;
+    }
+
+    .status-completed {
+        background: #28a745;
+        color: white;
+    }
+
+    .confirm-dialog {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.2);
+        z-index: 1000;
+    }
+
+    .overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 999;
+    }
+
+    .dialog-buttons {
+        margin-top: 15px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gerenciador de Tarefas - Condomínio</h1>
+        
+        <form id="taskForm">
+            <div class="form-group">
+                <label for="operador">Operador(a):</label>
+                <input type="text" id="operador" required>
+            </div>
+
+            <div class="form-group">
+                <label for="condominio">Condomínio:</label>
+                <input type="text" id="condominio" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="apartamento">Apartamento:</label>
+                <input type="text" id="apartamento" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="dataHora">Data e Hora:</label>
+                <input type="datetime-local" id="dataHora" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="ocorrencia">Ocorrência:</label>
+                <textarea id="ocorrencia" required></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="prioridade">Prioridade:</label>
+                <select id="prioridade" required>
+                    <option value="comum">Comum</option>
+                    <option value="alta">Alta</option>
+                </select>
+            </div>
+            
+            <button type="submit">Adicionar Tarefa</button>
+        </form>
+
+        <div class="task-list" id="taskList">
+            <!-- Tarefas serão adicionadas aqui dinamicamente -->
+        </div>
+    </div>
+
+    <div id="notification" class="notification">
+        Nova tarefa adicionada com sucesso!
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+    <div class="confirm-dialog" id="confirmDialog">
+        <h3>Confirmação</h3>
+        <p>Tem certeza que deseja excluir esta tarefa?</p>
+        <div class="dialog-buttons">
+            <button onclick="cancelDelete()">Cancelar</button>
+            <button onclick="confirmDelete()" class="delete-btn">Excluir</button>
+        </div>
+    </div>
+
+    <audio id="notificationSound">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        let taskToDelete = null;
+
+        function deleteTask(taskId) {
+            taskToDelete = taskId;
+            document.getElementById('overlay').style.display = 'block';
+            document.getElementById('confirmDialog').style.display = 'block';
+        }
+
+        function confirmDelete() {
+            if (taskToDelete) {
+                let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+                tasks = tasks.filter(task => task.id !== taskToDelete);
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+                
+                const taskElement = document.getElementById(`task-${taskToDelete}`);
+                taskElement.remove();
+                
+                closeConfirmDialog();
+                taskToDelete = null;
+            }
+        }
+
+        function cancelDelete() {
+            closeConfirmDialog();
+            taskToDelete = null;
+        }
+
+        function closeConfirmDialog() {
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('confirmDialog').style.display = 'none';
+        }
+
+        function completeTask(taskId) {
+            let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+            tasks = tasks.map(task => {
+                if (task.id === taskId) {
+                    task.status = 'completed';
+                }
+                return task;
+            });
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            
+            const taskElement = document.getElementById(`task-${taskId}`);
+            taskElement.classList.add('completed');
+            taskElement.querySelector('.status-badge').className = 'status-badge status-completed';
+            taskElement.querySelector('.status-badge').textContent = 'Concluída';
+            taskElement.querySelector('.complete-btn').remove();
+        }
+
+        function togglePin(taskId) {
+            let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+            tasks = tasks.map(task => {
+                if (task.id === taskId) {
+                    task.pinned = !task.pinned;
+                }
+                return task;
+            });
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            
+            // Reload all tasks to maintain correct order
+            document.getElementById('taskList').innerHTML = '';
+            const pinnedTasks = tasks.filter(task => task.pinned);
+            const unpinnedTasks = tasks.filter(task => !task.pinned);
+            
+            // Add pinned tasks first, then unpinned
+            [...pinnedTasks, ...unpinnedTasks].forEach(task => addTaskToDOM(task));
+        }
+
+        function addTaskToDOM(task) {
+            const taskList = document.getElementById('taskList');
+            const taskElement = document.createElement('div');
+            taskElement.className = `task-item fade-in priority-${task.prioridade} ${task.status === 'completed' ? 'completed' : ''} ${task.pinned ? 'pinned' : ''}`;
+            taskElement.id = `task-${task.id}`;
+            
+            const dateTime = new Date(task.dataHora).toLocaleString('pt-BR');
+            const statusBadge = task.status === 'completed' ? 
+                '<span class="status-badge status-completed">Concluída</span>' : 
+                '<span class="status-badge status-pending">Pendente</span>';
+            
+            taskElement.innerHTML = `
+                <h3>Condomínio: ${task.condominio} ${statusBadge}</h3>
+                <p><strong>Operador(a):</strong> ${task.operador}</p>
+                <p><strong>Apartamento:</strong> ${task.apartamento}</p>
+                <p><strong>Data e Hora:</strong> ${dateTime}</p>
+                <p><strong>Ocorrência:</strong> ${task.ocorrencia}</p>
+                <p><strong>Prioridade:</strong> ${task.prioridade.charAt(0).toUpperCase() + task.prioridade.slice(1)}</p>
+                <div class="task-buttons">
+                    ${task.status !== 'completed' ? 
+                        `<button onclick="completeTask(${task.id})" class="complete-btn">Concluir</button>` : 
+                        ''}
+                    <button onclick="togglePin(${task.id})" class="pin-btn ${task.pinned ? 'pinned' : ''}">
+                        ${task.pinned ? 'Desafixar' : 'Fixar'}
+                    </button>
+                    <button onclick="deleteTask(${task.id})" class="delete-btn">Excluir</button>
+                </div>
+            `;
+            
+            // Insert according to pinned status
+            const firstNonPinned = Array.from(taskList.children).find(el => !el.classList.contains('pinned'));
+            if (task.pinned && firstNonPinned) {
+                taskList.insertBefore(taskElement, firstNonPinned);
+            } else if (task.pinned) {
+                taskList.insertBefore(taskElement, taskList.firstChild);
+            } else {
+                taskList.insertBefore(taskElement, firstNonPinned);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const taskForm = document.getElementById('taskForm');
+            const notification = document.getElementById('notification');
+            const notificationSound = document.getElementById('notificationSound');
+            const overlay = document.getElementById('overlay');
+            const confirmDialog = document.getElementById('confirmDialog');
+            
+            if (Notification.permission !== 'granted') {
+                Notification.requestPermission();
+            }
+
+            loadTasks();
+
+            taskForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const task = {
+                    id: Date.now(),
+                    operador: document.getElementById('operador').value,
+                    condominio: document.getElementById('condominio').value,
+                    apartamento: document.getElementById('apartamento').value,
+                    dataHora: document.getElementById('dataHora').value,
+                    ocorrencia: document.getElementById('ocorrencia').value,
+                    prioridade: document.getElementById('prioridade').value,
+                    status: 'pending',
+                    pinned: false
+                };
+                
+                saveTasks(task);
+                addTaskToDOM(task);
+                showNotification(task);
+                playNotificationSound();
+                taskForm.reset();
+            });
+
+            function showNotification(task) {
+                notification.classList.add('show');
+                setTimeout(() => {
+                    notification.classList.add('hide');
+                    setTimeout(() => {
+                        notification.classList.remove('show', 'hide');
+                    }, 500);
+                }, 3000);
+
+                if (Notification.permission === 'granted') {
+                    const systemNotification = new Notification('Nova Tarefa Adicionada', {
+                        body: `Operador: ${task.operador}\nCondomínio: ${task.condominio}\nApartamento: ${task.apartamento}`,
+                        icon: 'https://cdn-icons-png.flaticon.com/512/1581/1581954.png'
+                    });
+                }
+            }
+
+            function playNotificationSound() {
+                notificationSound.currentTime = 0;
+                notificationSound.play();
+            }
+
+            function saveTasks(task) {
+                let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+                tasks.push(task);
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+            }
+
+            function loadTasks() {
+                const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+                tasks.forEach(task => addTaskToDOM(task));
+            }
+        });
+    </script>
+</body></html>
